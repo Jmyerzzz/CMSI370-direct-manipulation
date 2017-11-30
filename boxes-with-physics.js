@@ -1,4 +1,66 @@
 ($ => {
+    $(function() {
+        $.fn.swipe = function(callback) {
+            var touchDown = false,
+                originalPosition = null,
+                $el = $(this);
+
+            var swipeInfo = function(event) {
+                var x = event.originalEvent.pageX,
+                    y = event.originalEvent.pageY,
+                    dx, dy;
+
+                dx = (x > originalPosition.x) ? "right" : "left";
+                dy = (y > originalPosition.y) ? "down" : "up";
+
+                return {
+                    direction: {
+                        x: dx,
+                        y: dy
+                    },
+                    offset: {
+                        x: x - originalPosition.x,
+                        y: originalPosition.y - y
+                    }
+                };
+            };
+
+            $el.on("touchstart mousedown", function (event) {
+                touchDown = true;
+                originalPosition = {
+                    x: event.originalEvent.pageX,
+                    y: event.originalEvent.pageY
+                };
+            });
+
+            $el.on("touchend mouseup", function () {
+                touchDown = false;
+                originalPosition = null;
+            });
+
+            $el.on("touchmove mousemove", function (event) {
+                if (!touchDown) { return;}
+                var info = swipeInfo(event);
+                callback(info.direction, info.offset);
+            });
+
+            return true;
+        };
+    });
+
+    let startDraw = function (event) {
+        $('body').swipe(function() {
+            this.anchorX = event.pageX;
+            this.anchorY = event.pageY;
+            let position = { left: this.anchorX, top: this.anchorY };
+
+            this.drawingbox = $("<div></div>")
+                .appendTo(this)
+                .addClass("box")
+                .data({position})
+                .offset(position);
+        });
+    };
 
     /**
      * Tracks a box as it is rubberbanded or moved across the drawing area.
@@ -78,6 +140,7 @@
      */
     const FRICTION_FACTOR = 0.99;
     const ACCELERATION_COEFFICIENT = 0.05;
+    const BUOYANCY = -.2;
     const FRAME_RATE = 120;
     const FRAME_DURATION = 1000 / FRAME_RATE;
 
@@ -110,9 +173,9 @@
             s.left += v.x;
             s.top -= v.y;
 
-            v.x += (a.x * ACCELERATION_COEFFICIENT);
-            v.y += (a.y * ACCELERATION_COEFFICIENT);
-            v.z += (a.z * ACCELERATION_COEFFICIENT);
+            v.x += (a.x * ACCELERATION_COEFFICIENT * BUOYANCY);
+            v.y += (a.y * ACCELERATION_COEFFICIENT * BUOYANCY);
+            v.z += (a.z * ACCELERATION_COEFFICIENT * BUOYANCY);
 
             v.x *= FRICTION_FACTOR;
             v.y *= FRICTION_FACTOR;
@@ -129,12 +192,12 @@
 
             if ((s.left <= bounds.left) || (s.left + $element.width() > bounds.right)) {
                 s.left = (s.left <= bounds.left) ? bounds.left : bounds.right - $element.width();
-                v.x = -v.x;
+                v.x = -v.x / 1.25;
             }
 
             if ((s.top <= bounds.top) || (s.top + $element.height() > bounds.bottom)) {
                 s.top = (s.top <= bounds.top) ? bounds.top : bounds.bottom - $element.height();
-                v.y = -v.y;
+                v.y = -v.y / 1.25;
             }
 
             // ...and the final result is sent on a one-way trip to the _view_.
@@ -152,6 +215,12 @@
         // Set up any pre-existing box elements for touch behavior.
         jQueryElements
             .addClass("drawing-area")
+
+            .each((index, element) => {
+                $(element)
+                    .bind("touchmove", startDraw)
+                    .bind("touchend");
+            })
 
             // Event handler setup must be low-level because jQuery
             // doesn't relay touch-specific event properties.
