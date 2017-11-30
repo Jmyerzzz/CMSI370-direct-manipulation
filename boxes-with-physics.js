@@ -1,41 +1,28 @@
 ($ => {
-    let startDraw = function(touch) {
-        if (!touch.target.movingBox) {
-            this.anchorX = touch.pageX;
-            this.anchorY = touch.pageY;
-            let position = { left: this.anchorX, top: this.anchorY };
+    let startDraw = function(event) {
+        $.each(event.changedTouches, function (index, touch) {
+            if (!touch.target.movingBox) {
+                this.anchorX = touch.pageX;
+                this.anchorY = touch.pageY;
+                let position = { left: this.anchorX, top: this.anchorY };
 
-            this.drawingbox = $("<div></div>")
-                .appendTo(this)
-                .addClass("box")
-                .data({
-                    position: position,
-                    velocity: { x: 0, y: 0, z: 0 },
-                    acceleration: { x: 0, y: 0, z: 0 }
-                })
-                .bind("touchstart", startMove)
-                .bind("touchstart", trackDraw)
-                .bind("touchend", endDrag)
-                .bind("touchend", unhighlight)
-                .offset(position);
-        }
-
+                this.drawingbox = $("<div></div>")
+                    .appendTo($("#drawing-area"))
+                    .addClass("box")
+                    .data({
+                        position: position,
+                        velocity: { x: 0, y: 0, z: 0 },
+                        acceleration: { x: 0, y: 0, z: 0 }
+                    })
+                    .bind("touchstart", startMove)
+                    .bind("touchstart", trackDrag)
+                    .bind("touchend", endDrag)
+                    .bind("touchend", unhighlight)
+                    .offset(position);
+            }
+        });
         $(".drawing-area .box").unbind("mousemove").unbind("mouseleave");
         event.preventDefault();
-    };
-
-    let trackDraw = function(touch) {
-        if (touch.target.drawingBox) {
-            let position = {
-                left: (this.anchorX < touch.pageX) ? this.anchorX : touch.pageX,
-                top: (this.anchorY < touch.pageY) ? this.anchorY : touch.pageY
-            };
-            this.drawingBox
-                .data({ position: position })
-                .offset(position)
-                .width(Math.abs(touch.pageX - this.anchorX))
-                .height(Math.abs(touch.pageY - this.anchorY));
-        }
     };
 
     /**
@@ -56,6 +43,16 @@
                 // This form of `data` allows us to update values one attribute at a time.
                 $(touch.target).data('position', newPosition);
                 touch.target.movingBox.offset(newPosition);
+            } else if (touch.target.drawingBox) {
+                let position = {
+                    left: (this.anchorX < touch.pageX) ? this.anchorX : touch.pageX,
+                    top: (this.anchorY < touch.pageY) ? this.anchorY : touch.pageY
+                };
+                this.drawingBox
+                    .data({ position: position })
+                    .offset(position)
+                    .width(Math.abs(touch.pageX - this.anchorX))
+                    .height(Math.abs(touch.pageY - this.anchorY));
             }
         });
 
@@ -74,7 +71,7 @@
                 touch.target.movingBox = null;
             } else if (touch.target.drawingBox) {
                 touch.target.drawingBox
-                    .touchmove(trackDrag)
+                    .touchstart(trackDrag)
                     .touchend(unhighlight)
                     .touchstart(startMove);
                 touch.target.drawingBox = null;
@@ -202,9 +199,8 @@
             // doesn't relay touch-specific event properties.
             .each((index, element) => {
                 $(element)
-                    .bind("touchmove", trackDrag)
-                    .bind("touchmove", startDraw)
-                    .bind("touchmove", trackDraw)
+                    .bind("touchstart", trackDrag)
+                    .bind("touchstart", startDraw)
                     .bind("touchend", endDrag);
             })
 
