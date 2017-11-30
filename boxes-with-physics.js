@@ -1,4 +1,6 @@
 ($ => {
+    let drawingMap = new Map();
+    let movingMap = new Map();
     let startDraw = function(event) {
         $.each(event.changedTouches, function (index, touch) {
             if (!touch.target.movingBox) {
@@ -6,7 +8,7 @@
                 this.anchorY = touch.pageY;
                 let position = { left: this.anchorX, top: this.anchorY };
 
-                this.drawingbox = $("<div></div>")
+                let drawingBox = $("<div></div>")
                     .appendTo($("#drawing-area"))
                     .addClass("box")
                     .data({
@@ -15,13 +17,14 @@
                         acceleration: { x: 0, y: 0, z: 0 }
                     })
                     .bind("touchstart", startMove)
-                    .bind("touchstart", trackDrag)
+                    .bind("touchmove", trackDrag)
                     .bind("touchend", endDrag)
                     .bind("touchend", unhighlight)
                     .offset(position);
+                drawingMap.set(touch.indentifier, drawingBox);
             }
+
         });
-        $(".drawing-area .box").unbind("mousemove").unbind("mouseleave");
         event.preventDefault();
     };
 
@@ -33,7 +36,7 @@
     let trackDrag = function(event) {
         $.each(event.changedTouches, function (index, touch) {
             // Don't bother if we aren't tracking anything.
-            if (touch.target.movingBox) {
+            if (movingMap.has(touch.indentifier)) {
                 // Reposition the object.
                 let newPosition = {
                     left: touch.pageX - touch.target.deltaX,
@@ -43,7 +46,7 @@
                 // This form of `data` allows us to update values one attribute at a time.
                 $(touch.target).data('position', newPosition);
                 touch.target.movingBox.offset(newPosition);
-            } else if (touch.target.drawingBox) {
+            } else if (drawingMap.has(touch.identifier)) {
                 let position = {
                     left: (this.anchorX < touch.pageX) ? this.anchorX : touch.pageX,
                     top: (this.anchorY < touch.pageY) ? this.anchorY : touch.pageY
@@ -69,9 +72,11 @@
                 // Change state to "not-moving-anything" by clearing out
                 // touch.target.movingBox.
                 touch.target.movingBox = null;
+                movingMap.delete(touch.identifier);
             } else if (touch.target.drawingBox) {
+                drawingMap.delete(touch.identifier);
                 touch.target.drawingBox
-                    .touchstart(trackDrag)
+                    .touchmove(trackDrag)
                     .touchend(unhighlight)
                     .touchstart(startMove);
                 touch.target.drawingBox = null;
@@ -89,6 +94,8 @@
      */
     let startMove = event => {
         $.each(event.changedTouches, (index, touch) => {
+            movingMap.set(touch.indentifier, touch.target);
+
             // Highlight the element.
             $(touch.target).addClass("box-highlight");
 
@@ -199,7 +206,7 @@
             // doesn't relay touch-specific event properties.
             .each((index, element) => {
                 $(element)
-                    .bind("touchstart", trackDrag)
+                    .bind("touchmove", trackDrag)
                     .bind("touchstart", startDraw)
                     .bind("touchend", endDrag);
             })
