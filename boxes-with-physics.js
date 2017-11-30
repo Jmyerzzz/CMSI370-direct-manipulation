@@ -1,65 +1,41 @@
 ($ => {
-    $(function() {
-        $.fn.swipe = function(callback) {
-            var touchDown = false,
-                originalPosition = null,
-                $el = $(this);
-
-            var swipeInfo = function(event) {
-                var x = event.originalEvent.pageX,
-                    y = event.originalEvent.pageY,
-                    dx, dy;
-
-                dx = (x > originalPosition.x) ? "right" : "left";
-                dy = (y > originalPosition.y) ? "down" : "up";
-
-                return {
-                    direction: {
-                        x: dx,
-                        y: dy
-                    },
-                    offset: {
-                        x: x - originalPosition.x,
-                        y: originalPosition.y - y
-                    }
-                };
-            };
-
-            $el.on("touchstart mousedown", function (event) {
-                touchDown = true;
-                originalPosition = {
-                    x: event.originalEvent.pageX,
-                    y: event.originalEvent.pageY
-                };
-            });
-
-            $el.on("touchend mouseup", function () {
-                touchDown = false;
-                originalPosition = null;
-            });
-
-            $el.on("touchmove mousemove", function (event) {
-                if (!touchDown) { return;}
-                var info = swipeInfo(event);
-                callback(info.direction, info.offset);
-            });
-
-            return true;
-        };
-    });
-
-    let startDraw = function (event) {
-        $('body').swipe(function() {
-            this.anchorX = event.pageX;
-            this.anchorY = event.pageY;
+    let startDraw = function(touch) {
+        if (!touch.target.movingBox) {
+            this.anchorX = touch.pageX;
+            this.anchorY = touch.pageY;
             let position = { left: this.anchorX, top: this.anchorY };
 
             this.drawingbox = $("<div></div>")
                 .appendTo(this)
                 .addClass("box")
-                .data({position})
+                .data({
+                    position: position,
+                    velocity: { x: 0, y: 0, z: 0 },
+                    acceleration: { x: 0, y: 0, z: 0 }
+                })
+                .bind("touchstart", startMove)
+                .bind("touchstart", trackDraw)
+                .bind("touchend", endDrag)
+                .bind("touchend", unhighlight)
                 .offset(position);
-        });
+        }
+
+        $(".drawing-area .box").unbind("mousemove").unbind("mouseleave");
+        event.preventDefault();
+    };
+
+    let trackDraw = function(touch) {
+        if (touch.target.drawingBox) {
+            let position = {
+                left: (this.anchorX < touch.pageX) ? this.anchorX : touch.pageX,
+                top: (this.anchorY < touch.pageY) ? this.anchorY : touch.pageY
+            };
+            this.drawingBox
+                .data({ position: position })
+                .offset(position)
+                .width(Math.abs(touch.pageX - this.anchorX))
+                .height(Math.abs(touch.pageY - this.anchorY));
+        }
     };
 
     /**
@@ -67,7 +43,7 @@
      * Note how we can use arrow function notation here because we don't need
      * the `this` variable in this implementation.
      */
-    let trackDrag = event => {
+    let trackDrag = function(event) {
         $.each(event.changedTouches, function (index, touch) {
             // Don't bother if we aren't tracking anything.
             if (touch.target.movingBox) {
@@ -96,6 +72,12 @@
                 // Change state to "not-moving-anything" by clearing out
                 // touch.target.movingBox.
                 touch.target.movingBox = null;
+            } else if (touch.target.drawingBox) {
+                touch.target.drawingBox
+                    .touchmove(trackDrag)
+                    .touchend(unhighlight)
+                    .touchstart(startMove);
+                touch.target.drawingBox = null;
             }
         });
     };
@@ -216,17 +198,13 @@
         jQueryElements
             .addClass("drawing-area")
 
-            .each((index, element) => {
-                $(element)
-                    .bind("touchmove", startDraw)
-                    .bind("touchend");
-            })
-
             // Event handler setup must be low-level because jQuery
             // doesn't relay touch-specific event properties.
             .each((index, element) => {
                 $(element)
                     .bind("touchmove", trackDrag)
+                    .bind("touchmove", startDraw)
+                    .bind("touchmove", trackDraw)
                     .bind("touchend", endDrag);
             })
 
