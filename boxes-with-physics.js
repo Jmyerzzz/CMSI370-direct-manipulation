@@ -4,9 +4,9 @@
     let startDraw = function(event) {
         $.each(event.changedTouches, function (index, touch) {
             if (!touch.target.movingBox) {
-                this.anchorX = touch.pageX;
-                this.anchorY = touch.pageY;
-                let position = { left: this.anchorX, top: this.anchorY };
+                touch.target.anchorX = touch.pageX;
+                touch.target.anchorY = touch.pageY;
+                let position = { left: touch.target.anchorX, top: touch.target.anchorY };
 
                 let drawingBox = $("<div></div>")
                     .appendTo($("#drawing-area"))
@@ -48,14 +48,14 @@
                 touch.target.movingBox.offset(newPosition);
             } else if (drawingMap.has(touch.identifier)) {
                 let position = {
-                    left: (this.anchorX < touch.pageX) ? this.anchorX : touch.pageX,
-                    top: (this.anchorY < touch.pageY) ? this.anchorY : touch.pageY
+                    left: (touch.target.anchorX < touch.pageX) ? touch.target.anchorX : touch.pageX,
+                    top: (touch.target.anchorY < touch.pageY) ? touch.target.anchorY : touch.pageY
                 };
-                this.drawingBox
+                touch.target.drawingBox
+                    .width(Math.abs(touch.pageX - touch.target.anchorX))
+                    .height(Math.abs(touch.pageY - touch.target.anchorY))
                     .data({ position: position })
-                    .offset(position)
-                    .width(Math.abs(touch.pageX - this.anchorX))
-                    .height(Math.abs(touch.pageY - this.anchorY));
+                    .offset(position);
             }
         });
 
