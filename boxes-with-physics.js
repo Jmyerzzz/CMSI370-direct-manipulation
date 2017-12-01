@@ -21,7 +21,7 @@
                     .bind("touchend", endDrag)
                     .bind("touchend", unhighlight)
                     .offset(position);
-                drawingMap.set(touch.indentifier, drawingBox);
+                drawingMap.set(touch.identifier, drawingBox);
             }
 
         });
@@ -51,7 +51,7 @@
                     left: (touch.target.anchorX < touch.pageX) ? touch.target.anchorX : touch.pageX,
                     top: (touch.target.anchorY < touch.pageY) ? touch.target.anchorY : touch.pageY
                 };
-                touch.target.drawingBox
+                drawingMap.get(touch.identifier)
                     .width(Math.abs(touch.pageX - touch.target.anchorX))
                     .height(Math.abs(touch.pageY - touch.target.anchorY))
                     .data({ position: position })
