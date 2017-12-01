@@ -32,19 +32,13 @@
 
     let inflate = function(event) {
         $.each(event.changedTouches, function (index, touch) {
-            if (event.TouchList.length >= 2) {
-                if (Math.abs(touch.pageX - $(touch.target).offset().left) >
-                    Math.abs(touch.pageY - $(touch.target).offset().top)) {
-                    touch.target
-                        .width(Math.abs(touch.pageX - $(touch.target).offset().left))
-                        .height(Math.abs(touch.pageY - $(touch.target).offset().left));
-                } else {
-                    touch.target
-                        .width(Math.abs(touch.pageX - $(touch.target).offset().top))
-                        .height(Math.abs(touch.pageY - $(touch.target).offset().top));
-                }
-
+            let width = parseInt($(touch.target).css("width")) + 15;
+            let height = parseInt($(touch.target).css("height")) + 15;
+            if (width >= 250) {
+                $(touch.target).remove();
             }
+            $(touch.target).css('width', width);
+            $(touch.target).css('height', height);
         });
         event.preventDefault();
     };
@@ -103,6 +97,7 @@
                 touch.target.drawingBox = null;
             }
         });
+        event.preventDefault();
     };
 
     /**
@@ -140,6 +135,7 @@
         // Eat up the event so that the drawing area does not
         // deal with it.
         event.stopPropagation();
+        event.preventDefault();
     };
 
     /**
@@ -229,13 +225,13 @@
                 $(element)
                     .bind("touchmove", trackDrag)
                     .bind("touchstart", startDraw)
-                    .bind("touchstart", inflate)
                     .bind("touchend", endDrag);
             })
 
             .find("div.box").each((index, element) => {
                 $(element)
                     .bind("touchstart", startMove)
+                    .bind("touchstart", inflate)
                     .bind("touchend", unhighlight)
                     .data({
                         position: $(element).offset(),
