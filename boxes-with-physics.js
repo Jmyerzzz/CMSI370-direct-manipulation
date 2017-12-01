@@ -1,6 +1,7 @@
 ($ => {
     let drawingMap = new Map();
     let movingMap = new Map();
+
     let startDraw = function(event) {
         $.each(event.changedTouches, function (index, touch) {
             if (!touch.target.movingBox) {
@@ -20,10 +21,30 @@
                     .bind("touchmove", trackDrag)
                     .bind("touchend", endDrag)
                     .bind("touchend", unhighlight)
+                    .bind("touchstart", inflate)
                     .offset(position);
                 drawingMap.set(touch.identifier, drawingBox);
             }
 
+        });
+        event.preventDefault();
+    };
+
+    let inflate = function(event) {
+        $.each(event.changedTouches, function (index, touch) {
+            if (event.TouchList.length >= 2) {
+                if (Math.abs(touch.pageX - $(touch.target).offset().left) >
+                    Math.abs(touch.pageY - $(touch.target).offset().top)) {
+                    touch.target
+                        .width(Math.abs(touch.pageX - $(touch.target).offset().left))
+                        .height(Math.abs(touch.pageY - $(touch.target).offset().left));
+                } else {
+                    touch.target
+                        .width(Math.abs(touch.pageX - $(touch.target).offset().top))
+                        .height(Math.abs(touch.pageY - $(touch.target).offset().top));
+                }
+
+            }
         });
         event.preventDefault();
     };
@@ -36,7 +57,7 @@
     let trackDrag = function(event) {
         $.each(event.changedTouches, function (index, touch) {
             // Don't bother if we aren't tracking anything.
-            if (movingMap.has(touch.indentifier)) {
+            if (movingMap.has(touch.identifier)) {
                 // Reposition the object.
                 let newPosition = {
                     left: touch.pageX - touch.target.deltaX,
@@ -52,8 +73,8 @@
                     top: (touch.target.anchorY < touch.pageY) ? touch.target.anchorY : touch.pageY
                 };
                 drawingMap.get(touch.identifier)
-                    .width(Math.abs(touch.pageX - touch.target.anchorX))
-                    .height(Math.abs(touch.pageY - touch.target.anchorY))
+                    .width((Math.abs(touch.pageY - touch.target.anchorY) + Math.abs(touch.pageX - touch.target.anchorX)) / 2)
+                    .height((Math.abs(touch.pageY - touch.target.anchorY) + Math.abs(touch.pageX - touch.target.anchorX)) / 2)
                     .data({ position: position })
                     .offset(position);
             }
@@ -94,7 +115,7 @@
      */
     let startMove = event => {
         $.each(event.changedTouches, (index, touch) => {
-            movingMap.set(touch.indentifier, touch.target);
+            movingMap.set(touch.identifier, touch.target);
 
             // Highlight the element.
             $(touch.target).addClass("box-highlight");
@@ -208,6 +229,7 @@
                 $(element)
                     .bind("touchmove", trackDrag)
                     .bind("touchstart", startDraw)
+                    .bind("touchstart", inflate)
                     .bind("touchend", endDrag);
             })
 
